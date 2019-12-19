@@ -1,5 +1,6 @@
 package com.imooc.kafkastudy;
 
+import org.apache.kafka.clients.consumer.CommitFailedException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -51,6 +52,63 @@ public class MyConsumer {
     }
   }
 
+  // 同步提交
+  private static void generalConsumeMessageSyncCommit(){
+    properties.put("auto.commit.offset", false); // 手动设置位移
+    consumer = new KafkaConsumer<>(properties);
+    consumer.subscribe(Collections.singleton("imooc-kafka-study-x")); // topic name
+    while(true){
+      boolean flag = true;
+      ConsumerRecords<String, String> records = consumer.poll(100);
+      for (ConsumerRecord<String, String> record : records) {
+        System.out.println(String.format(
+          "topic = %s, partition = %s, key = %s, value = %s",
+          record.topic(),
+          record.partition(),
+          record.key(),
+          record.value()
+        ));
+        if (record.value().equals("done")) {
+          flag = false;
+        }
+      }
+      try{
+        consumer.commitSync(); // 同步提交
+      }catch (CommitFailedException ex){
+        System.out.println("commit failed error: " + ex.getMessage());
+      }
+      if (!flag) {
+        break;
+      }
+    }
+  }
+
+  // 异步提交
+  private static void generalConsumeMessageAsyncCommit(){
+    properties.put("auto.commit.offset", false); // 手动设置位移
+    consumer = new KafkaConsumer<>(properties);
+    consumer.subscribe(Collections.singleton("imooc-kafka-study-x")); // topic name
+    while(true){
+      boolean flag = true;
+      ConsumerRecords<String, String> records = consumer.poll(100);
+      for (ConsumerRecord<String, String> record : records) {
+        System.out.println(String.format(
+          "topic = %s, partition = %s, key = %s, value = %s",
+          record.topic(),
+          record.partition(),
+          record.key(),
+          record.value()
+        ));
+        if (record.value().equals("done")) {
+          flag = false;
+        }
+      }
+     consumer.commitAsync(); // 异步提交（同步提交会重试，异步没有实现重试）
+      if (!flag) {
+        break;
+      }
+    }
+  }
   public static void main(String[] args) {
     generalConsumeMessageAutoCommit();
   }
